@@ -1,0 +1,23 @@
+{
+  "name": "hello-dependabot-actions",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/geminiyellow/hello-dependabot-actions.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/geminiyellow/hello-dependabot-actions/issues"
+  },
+  "homepage": "https://github.com/geminiyellow/hello-dependabot-actions#readme",
+  "dependencies": {
+    "nuxt": "^2.10.2"
+  }
+}
