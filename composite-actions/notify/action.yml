@@ -1,0 +1,138 @@
+name: 'Send Notification'
+description: 'Send notification about workflow status'
+author: 'geminiyellow'
+
+inputs:
+  status:
+    description: 'Status of the workflow (success, failure, cancelled)'
+    required: true
+  message:
+    description: 'Custom message to send'
+    required: false
+    default: ''
+  title:
+    description: 'Notification title'
+    required: false
+    default: 'Workflow Notification'
+  webhook-url:
+    description: 'Webhook URL for notifications (Slack, Discord, etc.)'
+    required: false
+    default: ''
+
+outputs:
+  notification-sent:
+    description: 'Whether notification was sent successfully'
+    value: ${{ steps.send.outputs.sent }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Prepare notification message
+      id: prepare
+      shell: bash
+      run: |
+        STATUS="${{ inputs.status }}"
+        CUSTOM_MSG="${{ inputs.message }}"
+        TITLE="${{ inputs.title }}"
+
+        # Set emoji based on status
+        case "$STATUS" in
+          success)
+            EMOJI="✅"
+            COLOR="good"
+            ;;
+          failure)
+            EMOJI="❌"
+            COLOR="danger"
+            ;;
+          cancelled)
+            EMOJI="⚠️"
+            COLOR="warning"
+            ;;
+          *)
+            EMOJI="ℹ️"
+            COLOR="warning"
+            ;;
+        esac
+
+        # Construct message
+        if [ -z "$CUSTOM_MSG" ]; then
+          MESSAGE="Workflow ${STATUS}"
+        else
+          MESSAGE="${CUSTOM_MSG}"
+        fi
+
+        # Export for next steps
+        echo "emoji=${EMOJI}" >> $GITHUB_OUTPUT
+        echo "color=${COLOR}" >> $GITHUB_OUTPUT
+        echo "message=${MESSAGE}" >> $GITHUB_OUTPUT
+
+        # Print to console
+        echo "${EMOJI} ${TITLE}: ${MESSAGE}"
+
+    - name: Send notification
+      id: send
+      shell: bash
+      run: |
+        WEBHOOK_URL="${{ inputs.webhook-url }}"
+
+        if [ -z "$WEBHOOK_URL" ]; then
+          echo "No webhook URL provided, skipping notification"
+          echo "sent=false" >> $GITHUB_OUTPUT
+        else
+          echo "Sending notification to webhook..."
+
+          # Prepare payload (example for Slack-compatible webhooks)
+          PAYLOAD=$(cat <<EOF
+        {
+          "text": "${{ inputs.title }}",
+          "attachments": [{
+            "color": "${{ steps.prepare.outputs.color }}",
+            "text": "${{ steps.prepare.outputs.emoji }} ${{ steps.prepare.outputs.message }}",
+            "fields": [
+              {
+                "title": "Repository",
+                "value": "${{ github.repository }}",
+                "short": true
+              },
+              {
+                "title": "Branch",
+                "value": "${{ github.ref_name }}",
+                "short": true
+              },
+              {
+                "title": "Actor",
+                "value": "${{ github.actor }}",
+                "short": true
+              },
+              {
+                "title": "Workflow",
+                "value": "${{ github.workflow }}",
+                "short": true
+              }
+            ],
+            "footer": "GitHub Actions",
+            "footer_icon": "https://github.githubassets.com/favicon.ico"
+          }]
+        }
+        EOF
+          )
+
+          # Send request
+          RESPONSE=$(curl -s -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            -w "%{http_code}")
+
+          if [ "$RESPONSE" = "200" ]; then
+            echo "✅ Notification sent successfully"
+            echo "sent=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Failed to send notification (HTTP $RESPONSE)"
+            echo "sent=false" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+branding:
+  icon: 'bell'
+  color: 'blue'
