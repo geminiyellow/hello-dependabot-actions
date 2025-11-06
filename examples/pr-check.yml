@@ -1,0 +1,31 @@
+# 示例：Pull Request 检查
+# 放置在你的仓库中：.github/workflows/pr-check.yml
+
+name: PR Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # 代码检查
+  lint:
+    uses: geminiyellow/hello-dependabot-actions/.github/workflows/reusable-lint.yml@main
+    with:
+      node-version: '18.x'
+
+  # 安全扫描
+  security:
+    uses: geminiyellow/hello-dependabot-actions/.github/workflows/reusable-security-scan.yml@main
+    with:
+      severity-threshold: 'low'
+      fail-on-severity: 'high'
+
+  # 测试
+  test:
+    needs: [lint, security]
+    uses: geminiyellow/hello-dependabot-actions/.github/workflows/reusable-node-ci.yml@main
+    with:
+      node-version: '18.x'
+      run-tests: true
+      run-build: false  # PR 检查可以跳过构建以节省时间

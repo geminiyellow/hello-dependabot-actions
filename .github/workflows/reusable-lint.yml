@@ -1,0 +1,53 @@
+name: Reusable Code Linting
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '18.x'
+      working-directory:
+        description: 'Working directory for the project'
+        required: false
+        type: string
+        default: '.'
+      eslint-config:
+        description: 'Path to ESLint config file'
+        required: false
+        type: string
+        default: '.eslintrc.js'
+    outputs:
+      lint-result:
+        description: 'Lint result status'
+        value: ${{ jobs.lint.outputs.result }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.lint.outcome }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working-directory }}
+        run: npm ci
+
+      - name: Run ESLint
+        id: lint
+        working-directory: ${{ inputs.working-directory }}
+        run: npm run lint --if-present
+
+      - name: Check formatting
+        working-directory: ${{ inputs.working-directory }}
+        run: npm run format:check --if-present

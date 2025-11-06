@@ -1,0 +1,65 @@
+name: Reusable Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: 'Working directory for the project'
+        required: false
+        type: string
+        default: '.'
+      severity-threshold:
+        description: 'Minimum severity to report (low, moderate, high, critical)'
+        required: false
+        type: string
+        default: 'moderate'
+      fail-on-severity:
+        description: 'Fail the build on this severity or higher'
+        required: false
+        type: string
+        default: 'high'
+    outputs:
+      vulnerabilities-found:
+        description: 'Whether vulnerabilities were found'
+        value: ${{ jobs.security-scan.outputs.vuln-found }}
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    outputs:
+      vuln-found: ${{ steps.audit.outputs.vulnerabilities }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+
+      - name: Run npm audit
+        id: audit
+        working-directory: ${{ inputs.working-directory }}
+        continue-on-error: true
+        run: |
+          npm audit --audit-level=${{ inputs.severity-threshold }} > audit-report.txt 2>&1
+          AUDIT_EXIT_CODE=$?
+
+          if [ $AUDIT_EXIT_CODE -ne 0 ]; then
+            echo "vulnerabilities=true" >> $GITHUB_OUTPUT
+            cat audit-report.txt
+          else
+            echo "vulnerabilities=false" >> $GITHUB_OUTPUT
+            echo "No vulnerabilities found at ${{ inputs.severity-threshold }} level or above."
+          fi
+
+      - name: Check severity threshold
+        if: steps.audit.outputs.vulnerabilities == 'true'
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          npm audit --audit-level=${{ inputs.fail-on-severity }}
+          if [ $? -ne 0 ]; then
+            echo "::error::Vulnerabilities found at ${{ inputs.fail-on-severity }} level or above!"
+            exit 1
+          fi
