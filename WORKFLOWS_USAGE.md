@@ -235,6 +235,132 @@ jobs:
 
 ---
 
+## 🏢 组织和私有仓库使用
+
+### 在私有组织中使用
+
+如果你想在私有组织内创建共享的 Actions，例如 `af/actions-packages`：
+
+#### 1. 仓库结构
+
+```
+af/actions-packages/
+└── .github/workflows/
+    ├── reusable-ci.yml
+    ├── reusable-deploy.yml
+    └── reusable-lint.yml
+```
+
+#### 2. 在组织内其他仓库使用
+
+```yaml
+# af/working-repo/.github/workflows/ci.yml
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  ci:
+    # 直接引用组织内的私有仓库
+    uses: af/actions-packages/.github/workflows/reusable-ci.yml@v1.0.0
+    with:
+      node-version: '18.x'
+```
+
+#### 3. 跨组织使用私有仓库
+
+如果需要在组织外使用私有仓库的 workflows，需要配置访问权限：
+
+**方法 A: 使用 Personal Access Token (推荐)**
+
+```yaml
+# external-org/project/.github/workflows/ci.yml
+name: CI
+
+on: [push]
+
+jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    steps:
+      # 先 checkout 私有 actions 仓库
+      - name: Checkout private actions
+        uses: actions/checkout@v4
+        with:
+          repository: af/actions-packages
+          token: ${{ secrets.PAT_TOKEN }}
+          path: .github/actions
+
+      # 使用 local action
+      - name: Run CI
+        uses: ./.github/actions/ci-action
+```
+
+**方法 B: GitHub App Token（企业级推荐）**
+
+```yaml
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Use private action
+        uses: af/actions-packages/ci-action@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+```
+
+#### 4. 设置组织级别的访问权限
+
+在组织设置中允许仓库访问：
+
+1. 进入组织 `af` 的 Settings
+2. 选择 Actions → General
+3. 在 "Access" 部分，选择允许哪些仓库可以访问此 action
+
+### 版本发布流程
+
+```bash
+# 在 af/actions-packages 仓库中
+
+# 1. 提交更改
+git add .
+git commit -m "feat: update CI workflow"
+git push
+
+# 2. 创建版本标签
+git tag v1.0.0
+git push origin v1.0.0
+
+# 3. 在 GitHub 上创建 Release（可选但推荐）
+gh release create v1.0.0 --title "v1.0.0" --notes "Initial release"
+```
+
+### 在工作仓库中引用不同版本
+
+```yaml
+jobs:
+  # 使用最新的稳定版本（推荐）
+  ci-stable:
+    uses: af/actions-packages/.github/workflows/reusable-ci.yml@v1.0.0
+
+  # 使用主分支（获取最新功能，但可能不稳定）
+  ci-latest:
+    uses: af/actions-packages/.github/workflows/reusable-ci.yml@main
+
+  # 使用特定 commit（最安全，完全锁定）
+  ci-locked:
+    uses: af/actions-packages/.github/workflows/reusable-ci.yml@abc1234
+```
+
+---
+
 ## 🔒 密钥管理
 
 ### 在调用仓库中设置密钥：
