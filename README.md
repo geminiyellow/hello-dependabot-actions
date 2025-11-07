@@ -48,13 +48,72 @@ jobs:
 | `reusable-deploy.yml` | 部署流程 | [查看详情](WORKFLOWS_USAGE.md#3-部署-reusable-deployyml) |
 | `reusable-security-scan.yml` | 安全扫描 | [查看详情](WORKFLOWS_USAGE.md#4-安全扫描-reusable-security-scanyml) |
 
+## 🔐 跨组织私有访问
+
+如果你的 Actions 仓库是**私有的**，并且需要在**不同组织**的仓库中使用：
+
+### Reusable Workflows
+⚠️ **无法直接跨组织使用私有的 Reusable Workflows**
+
+### Composite Actions
+✅ **可以跨组织使用！** 需要配置访问权限：
+
+```yaml
+# 在消费仓库中
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Checkout 私有 actions 仓库
+      - uses: actions/checkout@v4
+        with:
+          repository: af/actions-packages  # 私有仓库
+          token: ${{ secrets.AF_ACTIONS_PAT }}  # Personal Access Token
+          path: .github/private-actions
+          ref: v1.0.0
+
+      # 使用 Composite Action
+      - uses: ./.github/private-actions/composite-actions/setup-node
+```
+
+📘 **详细配置指南：** [CROSS_ORG_PRIVATE_ACCESS.md](CROSS_ORG_PRIVATE_ACCESS.md)
+
+包含：
+- Personal Access Token (PAT) 配置方法
+- GitHub App Token 配置方法（企业推荐）
+- 完整的使用示例和最佳实践
+- 安全性建议
+
+---
+
 ## 📖 完整文档
+
+### 核心文档
 
 查看 [WORKFLOWS_USAGE.md](WORKFLOWS_USAGE.md) 了解：
 - 每个 workflow 的详细说明
 - 所有可用参数和配置
 - 完整的使用示例
 - 最佳实践建议
+
+### 专题指南
+
+- 📋 [Composite Actions vs Reusable Workflows 对比](COMPOSITE_VS_REUSABLE.md)
+  - 详细功能对比
+  - 使用场景分析
+  - 如何选择合适的方案
+
+- 🏢 [私有组织使用指南](PRIVATE_ORG_GUIDE.md)
+  - 组织内部共享 Actions
+  - 版本管理和发布流程
+  - 权限配置
+
+- 🔐 [跨组织私有访问配置](CROSS_ORG_PRIVATE_ACCESS.md)
+  - PAT 和 GitHub App 配置
+  - 跨组织使用私有 Actions
+  - 安全最佳实践
 
 ## 💡 示例
 

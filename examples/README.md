@@ -45,6 +45,27 @@
 
 ---
 
+### 5. [private-org-usage.yml](./private-org-usage.yml) 🏢
+私有组织内使用共享 workflows：
+- 同组织内直接引用
+- 组合多个可重用 workflows
+- 完整的 CI/CD 流程
+
+**适用场景：** 私有组织内的标准化 CI/CD
+
+---
+
+### 6. [cross-org-private-usage.yml](./cross-org-private-usage.yml) 🔐
+跨组织使用私有 Composite Actions：
+- 使用 PAT 访问私有仓库
+- 使用 GitHub App Token（企业推荐）
+- 带缓存优化
+- 多个 Composite Actions 组合使用
+
+**适用场景：** Actions 仓库和消费仓库在不同组织
+
+---
+
 ## 🚀 如何使用
 
 1. **选择适合你的示例**
