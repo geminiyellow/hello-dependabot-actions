@@ -78,7 +78,24 @@ jobs:
       - uses: ./.github/private-actions/composite-actions/setup-node
 ```
 
+### 🚀 一键自动化配置
+
+**觉得手动配置麻烦？** 使用我们的自动化脚本！
+
+```bash
+# 在你的消费仓库中运行（一键完成所有配置）
+curl -sSL https://raw.githubusercontent.com/af/actions-packages/main/scripts/setup.sh | bash
+```
+
+这个脚本会自动：
+- ✅ 检查环境和依赖
+- ✅ 引导你配置 PAT
+- ✅ 生成 workflow 文件
+- ✅ 创建配置文档
+- ✅ 验证配置完整性
+
 📘 **详细配置指南：** [CROSS_ORG_PRIVATE_ACCESS.md](CROSS_ORG_PRIVATE_ACCESS.md)
+📜 **自动化脚本文档：** [scripts/README.md](scripts/README.md)
 
 包含：
 - Personal Access Token (PAT) 配置方法
