@@ -179,9 +179,14 @@ const fullAccess = PermissionFlags.READ | PermissionFlags.WRITE | PermissionFlag
 
 ## 📚 文档
 
+### 核心文档
 - **[系统设计文档](docs/DESIGN.md)** - 完整的系统设计和架构
 - **[高级场景](docs/ADVANCED_SCENARIOS.md)** - ABAC、RLS、CLS 等高级功能实现
-- **[统一系统](docs/UNIFIED_SYSTEM.md)** - 30+ 功能的完整文档和使用说明
+- **[统一系统](docs/UNIFIED_SYSTEM.md)** - 33+ 功能的完整文档和使用说明
+
+### 集成指南
+- **[GraphQL 联邦集成](docs/GRAPHQL_FEDERATION_INTEGRATION.md)** - GraphQL 网关、指令、子服务集成方案 ⭐
+- **[联邦权限与零信任](docs/FEDERATED_AND_ZERO_TRUST.md)** - 跨组织权限、持续验证架构
 
 ## 🎯 使用场景
 
