@@ -1,116 +1,194 @@
-# RBAC 系统 - 基于角色的多租户访问控制
+# 企业级统一权限管理系统 (Unified RBAC System)
 
-一个灵活、高性能的分层权限控制系统，支持从租户到资源的细粒度权限管理。
+一个功能完整、生产就绪的企业级权限管理系统，集成了 RBAC、ABAC、数据级权限、字段级权限等 30+ 高级功能。
 
-## 🎯 核心特性
+## 🌟 核心特性
 
-- ✅ **多租户隔离** - 完全的数据和权限隔离
-- ✅ **分层权限** - 5层权限控制（租户 → 组 → 用户 → 资源 → 黑白名单）
-- ✅ **优先级规则** - 底层权限覆盖顶层权限
-- ✅ **黑白名单** - 最高优先级的显式允许/拒绝
-- ✅ **权限继承** - 自动继承父层级权限
-- ✅ **高性能缓存** - 权限结果缓存，快速响应
-- ✅ **审计日志** - 完整的权限检查日志
-- ✅ **易于扩展** - 支持自定义权限类型
+### 基础权限管理
+- ✅ **RBAC** - 基于角色的访问控制（Tenant → Group → User → Resource → Blacklist/Whitelist）
+- ✅ **ABAC** - 基于属性的访问控制（时间、地点、设备、上下文）
+- ✅ **黑白名单** - 最高优先级的权限控制
+- ✅ **审计日志** - 完整的操作追踪和合规性审计
 
-## 📋 层级结构
+### 高级功能
+- ✅ **动态权限** - 基于关系的权限（所有者、创建者、参与者）
+- ✅ **条件权限** - 基于资源状态的权限（草稿/已发布/已归档）
+- ✅ **临时权限** - 时间限制的权限授予和自动过期
+- ✅ **权限委托** - 用户间的权限委托和委托链
+- ✅ **SOD 约束** - 职责分离，防止权限冲突
+- ✅ **审批工作流** - 多级审批、自动升级、超时处理
+- ✅ **数据级权限** (RLS) - 行级安全，SQL 过滤器生成
+- ✅ **字段级权限** (CLS) - 列级安全，字段脱敏
+- ✅ **资源层级** - 树形结构、权限继承、覆盖机制
+
+### 扩展功能
+- ⚡ **性能优化** - 三级缓存、预计算、位图索引
+- 📊 **权限分析** - 使用情况分析、过度授权检测、推荐系统
+- 🔍 **权限模拟** - What-if 分析、影响评估
+- 🛡️ **风险评分** - 多因素风险评估、智能审批
+- 📈 **合规报告** - SOX、GDPR、HIPAA 等合规性检查
+- 🔧 **调试工具** - 权限解释、用户比较、决策树可视化
+
+## 📁 项目结构
 
 ```
-优先级从低到高：
-
-1️⃣ Tenant (租户)
-   ↓ 租户默认权限，影响所有资源
-
-2️⃣ Group (组)
-   ↓ 组权限，覆盖租户权限
-
-3️⃣ User (用户)
-   ↓ 用户权限，覆盖组权限
-
-4️⃣ Resource (资源)
-   ↓ 资源权限，覆盖用户权限
-
-5️⃣ Blacklist/Whitelist (黑白名单)
-   ↓ 最高优先级，直接允许或拒绝
+rbac-system/
+├── docs/
+│   ├── DESIGN.md                # 系统设计文档
+│   ├── ADVANCED_SCENARIOS.md    # 高级场景实现
+│   └── UNIFIED_SYSTEM.md        # 统一系统完整文档（30+ 功能）
+├── src/
+│   ├── types.ts                 # 基础类型定义
+│   ├── unified-types.ts         # 统一系统类型定义
+│   ├── permission-evaluator.ts  # 基础权限评估器
+│   ├── unified-permission-engine.ts  # 统一权限引擎 ⭐
+│   ├── permission-cache.ts      # 缓存管理
+│   └── audit-logger.ts          # 审计日志
+├── examples/
+│   ├── basic-usage.ts           # 基础使用示例
+│   └── unified-system-example.ts # 统一系统完整示例 ⭐
+└── README.md                    # 本文件
 ```
 
 ## 🚀 快速开始
 
-### 安装依赖
+### 安装
 
 ```bash
 npm install
-# or
-yarn install
 ```
 
-### 基本使用
+### 统一系统使用（推荐）
 
 ```typescript
-import { PermissionEvaluator } from './src/permission-evaluator';
-import { PermissionFlags } from './src/types';
+import { UnifiedPermissionEngine } from './src/unified-permission-engine';
+import { PermissionFlags } from './src/unified-types';
 
-// 1. 创建数据存储实现
-const dataStore = new YourDataStore();
+// 创建权限引擎
+const dataStore = new YourDataStoreImplementation();
+const engine = new UnifiedPermissionEngine(dataStore);
 
-// 2. 创建权限评估器
-const evaluator = new PermissionEvaluator(dataStore, {
-  enableCache: true,
-  cacheTTL: 300000, // 5分钟
-  enableAudit: true,
-});
-
-// 3. 检查权限
-const result = await evaluator.checkPermission(
-  'user-123',              // 用户ID
-  'resource-456',          // 资源ID
-  PermissionFlags.READ     // 所需权限
+// 检查权限（自动应用所有策略）
+const result = await engine.checkPermission(
+  'user-123',
+  'resource-456',
+  PermissionFlags.READ,
+  {
+    ipAddress: '10.0.0.1',
+    isWorkingHours: true,
+    deviceType: 'desktop',
+    isTrustedDevice: true,
+  }
 );
 
 if (result.allowed) {
   console.log('✅ 访问允许');
+  console.log('原因:', result.reasons);
+  console.log('应用的策略:', result.appliedPolicies);
+
+  // 数据级过滤（RLS）
+  if (result.dataFilters) {
+    console.log('SQL过滤器:', result.dataFilters);
+  }
+
+  // 字段级脱敏（CLS）
+  if (result.fieldMasks) {
+    console.log('字段掩码:', result.fieldMasks);
+  }
 } else {
-  console.log('❌ 访问拒绝:', result.reason);
+  console.log('❌ 访问拒绝:', result.reasons[0]);
 }
+```
+
+### 批量权限检查
+
+```typescript
+const results = await engine.checkPermissionsBatch([
+  { userId: 'user-1', resourceId: 'res-1', requiredPermission: PermissionFlags.READ },
+  { userId: 'user-2', resourceId: 'res-2', requiredPermission: PermissionFlags.WRITE },
+  { userId: 'user-3', resourceId: 'res-3', requiredPermission: PermissionFlags.DELETE },
+]);
+
+results.forEach((result, i) => {
+  console.log(`请求 ${i + 1}: ${result.allowed ? '✓' : '✗'}`);
+});
+```
+
+### 获取用户有效权限
+
+```typescript
+const effectivePerms = await engine.getUserEffectivePermissions('user-123', 'resource-456');
+
+console.log('总权限:', effectivePerms.totalPermissions);
+console.log('权限来源:', effectivePerms.breakdown);
+console.log('详细说明:', effectivePerms.details);
 ```
 
 ### 运行示例
 
 ```bash
-# 查看完整示例
+# 基础示例
 ts-node examples/basic-usage.ts
+
+# 统一系统完整示例（推荐）
+ts-node examples/unified-system-example.ts
 ```
 
-## 📖 文档
+## 📖 核心概念
 
-### 核心文档
+### 权限检查流程
 
-- [设计文档](./docs/DESIGN.md) - 完整的系统设计说明
-- [API 文档](./docs/API.md) - API 接口文档
-- [数据模型](./docs/DESIGN.md#数据模型) - 数据库设计
-
-### 代码结构
+系统按以下顺序评估权限（任何步骤拒绝则立即返回拒绝）：
 
 ```
-rbac-system/
-├── docs/                   # 文档
-│   └── DESIGN.md          # 设计文档
-├── src/                    # 源代码
-│   ├── types.ts           # 类型定义
-│   ├── permission-evaluator.ts  # 核心评估器
-│   ├── permission-cache.ts      # 缓存模块
-│   └── audit-logger.ts          # 审计日志
-├── examples/               # 示例代码
-│   └── basic-usage.ts     # 基本使用示例
-└── tests/                  # 测试用例
+1. 黑名单检查          → 拒绝则返回 ❌
+2. 白名单检查          → 允许则返回 ✅
+3. ABAC 策略检查       → 拒绝则返回 ❌
+4. 条件权限检查        → 拒绝则返回 ❌
+5. 动态权限检查        → 累积权限 ⬆
+6. 临时权限检查        → 累积权限 ⬆
+7. 资源层级继承        → 累积权限 ⬆
+8. 直接权限检查        → 累积权限 ⬆
+9. 用户权限            → 累积权限 ⬆
+10. 组权限             → 累积权限 ⬆
+11. 租户权限           → 累积权限 ⬆
+12. SOD 约束检查       → 警告或拒绝 ⚠️
+13. 应用 RLS/CLS 过滤  → 返回结果 ✅
 ```
 
-## 💡 使用场景
-
-### 场景 1：企业文档管理
+### 权限标志（位运算）
 
 ```typescript
-// 租户：公司A
+enum PermissionFlags {
+  NONE = 0,        // 无权限
+  READ = 1,        // 读取 (0001)
+  WRITE = 2,       // 写入 (0010)
+  DELETE = 4,      // 删除 (0100)
+  EXECUTE = 8,     // 执行 (1000)
+  ADMIN = 16,      // 管理 (10000)
+  SHARE = 32,      // 分享
+  APPROVE = 64,    // 批准
+  AUDIT = 128,     // 审计
+  EXPORT = 256,    // 导出
+  IMPORT = 512,    // 导入
+}
+
+// 组合权限
+const fullAccess = PermissionFlags.READ | PermissionFlags.WRITE | PermissionFlags.DELETE;
+```
+
+## 📚 文档
+
+- **[系统设计文档](docs/DESIGN.md)** - 完整的系统设计和架构
+- **[高级场景](docs/ADVANCED_SCENARIOS.md)** - ABAC、RLS、CLS 等高级功能实现
+- **[统一系统](docs/UNIFIED_SYSTEM.md)** - 30+ 功能的完整文档和使用说明
+
+## 🎯 使用场景
+
+### 场景 1：企业文档管理系统
+
+```typescript
+// 配置：高安全级别用户在工作时间才能访问机密文档
 // 组：技术部（读写权限）、管理层（全部权限）
 // 用户：实习生（只读，机密文档黑名单）
 
