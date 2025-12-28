@@ -187,6 +187,7 @@ const fullAccess = PermissionFlags.READ | PermissionFlags.WRITE | PermissionFlag
 ### 集成指南
 - **[GraphQL 联邦集成](docs/GRAPHQL_FEDERATION_INTEGRATION.md)** - GraphQL 网关、指令、子服务集成方案 ⭐
 - **[联邦权限与零信任](docs/FEDERATED_AND_ZERO_TRUST.md)** - 跨组织权限、持续验证架构
+- **[性能优化指南](docs/PERFORMANCE_OPTIMIZATION.md)** - 多级缓存、批量查询、性能基准测试 🚀
 
 ## 🎯 使用场景
 
