@@ -1,0 +1,29 @@
+# 示例：定时安全扫描
+# 放置在你的仓库中：.github/workflows/security-scan.yml
+
+name: Weekly Security Scan
+
+on:
+  schedule:
+    # 每周一凌晨 2 点运行
+    - cron: '0 2 * * 1'
+  # 也可以手动触发
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    uses: geminiyellow/hello-dependabot-actions/.github/workflows/reusable-security-scan.yml@main
+    with:
+      severity-threshold: 'low'  # 扫描所有漏洞
+      fail-on-severity: 'moderate'  # 中等以上漏洞会导致失败
+
+  # 如果发现漏洞，发送通知
+  notify:
+    needs: security-scan
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send notification
+        run: |
+          echo "Security vulnerabilities found!"
+          # 这里可以添加发送邮件或 Slack 通知的逻辑

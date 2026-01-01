@@ -1,0 +1,203 @@
+# 示例：跨组织使用私有 Composite Actions
+# 场景：
+#   - Actions 仓库：af/actions-packages (private)
+#   - 消费仓库：microsb/working-repo (private)
+
+# 放置在你的消费仓库中：microsb/working-repo/.github/workflows/ci.yml
+
+name: CI with Private Actions
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ============================================
+  # 方法 1: 使用 Personal Access Token (PAT)
+  # ============================================
+  build-with-pat:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout 你自己的代码
+      - name: Checkout working repository
+        uses: actions/checkout@v4
+
+      # 2. Checkout 私有 actions 仓库（使用 PAT）
+      - name: Checkout private actions repository
+        uses: actions/checkout@v4
+        with:
+          repository: af/actions-packages  # 私有仓库
+          token: ${{ secrets.AF_ACTIONS_PAT }}  # 👈 需要在 Settings → Secrets 中配置
+          path: .github/private-actions
+          ref: v1.0.0  # 可以指定版本标签、分支或 commit SHA
+
+      # 3. 使用 Composite Action - Setup Node.js
+      - name: Setup Node.js environment
+        uses: ./.github/private-actions/composite-actions/setup-node
+        with:
+          node-version: '18.x'
+          working-directory: '.'
+          cache-enabled: 'true'
+
+      # 4. 运行测试
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build
+
+      # 5. 使用另一个 Composite Action - 发送通知
+      - name: Send success notification
+        if: success()
+        uses: ./.github/private-actions/composite-actions/notify
+        with:
+          status: 'success'
+          message: 'Build and tests passed!'
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send failure notification
+        if: failure()
+        uses: ./.github/private-actions/composite-actions/notify
+        with:
+          status: 'failure'
+          message: 'Build or tests failed!'
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ============================================
+  # 方法 2: 使用 GitHub App Token（企业推荐）
+  # ============================================
+  build-with-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout working repository
+        uses: actions/checkout@v4
+
+      # 1. 生成 GitHub App Token
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      # 2. Checkout 私有 actions 仓库（使用 App Token）
+      - name: Checkout private actions repository
+        uses: actions/checkout@v4
+        with:
+          repository: af/actions-packages
+          token: ${{ steps.generate_token.outputs.token }}  # 👈 使用 App Token
+          path: .github/private-actions
+          ref: v1.0.0
+
+      # 3. 使用 Composite Actions
+      - name: Setup Node.js
+        uses: ./.github/private-actions/composite-actions/setup-node
+        with:
+          node-version: '18.x'
+
+      - name: Run tests
+        run: npm test
+
+  # ============================================
+  # 方法 3: 带缓存优化（推荐用于频繁运行的 workflow）
+  # ============================================
+  build-with-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout working repository
+        uses: actions/checkout@v4
+
+      # 1. 缓存 private actions 仓库
+      - name: Cache private actions repository
+        id: cache-actions
+        uses: actions/cache@v3
+        with:
+          path: .github/private-actions
+          key: private-actions-${{ hashFiles('.github/workflows/*.yml') }}-v1.0.0
+          restore-keys: |
+            private-actions-
+
+      # 2. 只在缓存未命中时 checkout
+      - name: Checkout private actions repository
+        if: steps.cache-actions.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: af/actions-packages
+          token: ${{ secrets.AF_ACTIONS_PAT }}
+          path: .github/private-actions
+          ref: v1.0.0
+
+      # 3. 使用 Composite Actions
+      - name: Setup Node.js
+        uses: ./.github/private-actions/composite-actions/setup-node
+
+      - name: Run tests
+        run: npm test
+
+  # ============================================
+  # 方法 4: 多个 Composite Actions 组合使用
+  # ============================================
+  complete-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout working repository
+        uses: actions/checkout@v4
+
+      - name: Checkout private actions
+        uses: actions/checkout@v4
+        with:
+          repository: af/actions-packages
+          token: ${{ secrets.AF_ACTIONS_PAT }}
+          path: .github/private-actions
+          ref: v1.0.0
+
+      # 缓存依赖
+      - name: Cache dependencies
+        id: cache-deps
+        uses: ./.github/private-actions/composite-actions/cache-dependencies
+        with:
+          package-manager: 'npm'
+          working-directory: '.'
+
+      # Setup Node.js（如果缓存未命中，会自动安装依赖）
+      - name: Setup Node.js
+        uses: ./.github/private-actions/composite-actions/setup-node
+        with:
+          node-version: '18.x'
+
+      # 运行流程
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # 部署（示例）
+      - name: Deploy to staging
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          echo "Deploying to staging..."
+          # npm run deploy:staging
+
+      - name: Deploy to production
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Deploying to production..."
+          # npm run deploy:production
+
+      # 发送通知
+      - name: Notify deployment
+        if: always()
+        uses: ./.github/private-actions/composite-actions/notify
+        with:
+          status: ${{ job.status }}
+          message: 'Deployment ${{ job.status }}'
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}

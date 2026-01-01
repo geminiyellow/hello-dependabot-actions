@@ -1,0 +1,71 @@
+name: 'Setup Node.js Environment'
+description: 'Setup Node.js with caching and install dependencies'
+author: 'geminiyellow'
+
+inputs:
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '18.x'
+  working-directory:
+    description: 'Working directory for the project'
+    required: false
+    default: '.'
+  cache-enabled:
+    description: 'Whether to enable caching'
+    required: false
+    default: 'true'
+  registry-url:
+    description: 'npm registry URL (for publishing)'
+    required: false
+    default: ''
+
+outputs:
+  cache-hit:
+    description: 'Whether dependencies cache was hit'
+    value: ${{ steps.cache-deps.outputs.cache-hit }}
+  node-version:
+    description: 'The Node.js version that was installed'
+    value: ${{ steps.setup-node.outputs.node-version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      id: setup-node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.cache-enabled == 'true' && 'npm' || '' }}
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+        registry-url: ${{ inputs.registry-url }}
+
+    - name: Cache node_modules
+      id: cache-deps
+      if: inputs.cache-enabled == 'true'
+      uses: actions/cache@v3
+      with:
+        path: ${{ inputs.working-directory }}/node_modules
+        key: ${{ runner.os }}-node-${{ inputs.node-version }}-${{ hashFiles(format('{0}/package-lock.json', inputs.working-directory)) }}
+        restore-keys: |
+          ${{ runner.os }}-node-${{ inputs.node-version }}-
+          ${{ runner.os }}-node-
+
+    - name: Install dependencies
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: npm ci
+
+    - name: Print environment info
+      shell: bash
+      run: |
+        echo "✅ Node.js environment ready!"
+        echo "Node version: $(node -v)"
+        echo "npm version: $(npm -v)"
+        echo "Working directory: ${{ inputs.working-directory }}"
+        echo "Cache hit: ${{ steps.cache-deps.outputs.cache-hit || 'N/A' }}"
+
+branding:
+  icon: 'package'
+  color: 'green'

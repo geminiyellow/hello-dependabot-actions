@@ -1,0 +1,66 @@
+name: Reusable Node.js CI
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '18.x'
+      working-directory:
+        description: 'Working directory for the project'
+        required: false
+        type: string
+        default: '.'
+      run-tests:
+        description: 'Whether to run tests'
+        required: false
+        type: boolean
+        default: true
+      run-build:
+        description: 'Whether to run build'
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      NPM_TOKEN:
+        description: 'NPM token for private packages'
+        required: false
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Configure NPM
+        if: ${{ secrets.NPM_TOKEN != '' }}
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working-directory }}
+        run: npm ci
+
+      - name: Run linting
+        working-directory: ${{ inputs.working-directory }}
+        run: npm run lint --if-present
+
+      - name: Run tests
+        if: ${{ inputs.run-tests }}
+        working-directory: ${{ inputs.working-directory }}
+        run: npm test
+
+      - name: Run build
+        if: ${{ inputs.run-build }}
+        working-directory: ${{ inputs.working-directory }}
+        run: npm run build --if-present

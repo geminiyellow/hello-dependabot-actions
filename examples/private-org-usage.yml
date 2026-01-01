@@ -1,0 +1,47 @@
+# 示例：私有组织内使用共享 Workflows
+# 适用场景：在私有组织 af 内，从 af/actions-packages 仓库引用共享的 workflows
+
+# 放置在你的工作仓库中：af/working-repo/.github/workflows/ci.yml
+
+name: Organization CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # 安全扫描
+  security:
+    uses: af/actions-packages/.github/workflows/reusable-security-scan.yml@v1.0.0
+    with:
+      severity-threshold: 'moderate'
+      fail-on-severity: 'high'
+
+  # 代码检查
+  lint:
+    uses: af/actions-packages/.github/workflows/reusable-lint.yml@v1.0.0
+    with:
+      node-version: '18.x'
+
+  # CI 测试
+  ci:
+    needs: [security, lint]
+    uses: af/actions-packages/.github/workflows/reusable-node-ci.yml@v1.0.0
+    with:
+      node-version: '18.x'
+      run-tests: true
+      run-build: true
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # 部署到 staging
+  deploy-staging:
+    if: github.ref == 'refs/heads/main'
+    needs: ci
+    uses: af/actions-packages/.github/workflows/reusable-deploy.yml@v1.0.0
+    with:
+      environment: 'staging'
+    secrets:
+      DEPLOY_TOKEN: ${{ secrets.STAGING_DEPLOY_TOKEN }}

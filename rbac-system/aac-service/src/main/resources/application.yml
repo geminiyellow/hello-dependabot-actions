@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: aac-service
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-stacktrace: on_param
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:change-this-to-a-secure-random-256-bit-secret-key-in-production-environment-now}
+  issuer: ${JWT_ISSUER:aac-service}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}      # 15 minutes
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000} # 7 days
+  temp-token-expiration: ${JWT_TEMP_TOKEN_EXPIRATION:300000}          # 5 minutes
+
+# Keycloak Configuration
+keycloak:
+  server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8180}
+  realm: ${KEYCLOAK_REALM:enterprise}
+  client-id: ${KEYCLOAK_CLIENT_ID:aac-service}
+  client-secret: ${KEYCLOAK_CLIENT_SECRET:your-client-secret}
+  redirect-uri: ${KEYCLOAK_REDIRECT_URI:http://localhost:8080/auth/callback}
+
+# IMC Configuration
+imc:
+  base-url: ${IMC_BASE_URL:http://localhost:8081}
+  api-key: ${IMC_API_KEY:imc-api-key}
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.enterprise.rbac.aac: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.data.redis: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
